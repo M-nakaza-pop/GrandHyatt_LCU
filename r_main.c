@@ -263,7 +263,7 @@ unsigned int 	ledCall(unsigned int cnt);
 void			cardOn(char num);
 void			cardOff(void);
 char			swSearch(unsigned char num);
-unsigned int 	iniSw(unsigned char num);
+
 unsigned int 	mainte(unsigned char num, unsigned int cnt);
 unsigned int 	zeroWait(unsigned int j);
 unsigned int 	outputTask(unsigned int cnt);
@@ -318,11 +318,13 @@ void main(void)
 	ryInit(0);
 
 	info();
+	
+	portOut(MAIN1,ryCont(MAIN1,'r',0));
+	portOut(MAIN2,ryCont(MAIN2,'r',0));
 		
 	bathDim= BOFF;		//DL50ON;	//BATH_DL
+	ryCont(BATH,'w',0);	
 	
-	ryCont(BATH,'w',0);
-		
 	ryCont(FOOT,'w',0);
 	ryCont(DESK,'w',0);
 		
@@ -461,9 +463,9 @@ void	AplCall(void){
 			
 				case 0:	/*10ｍSで発生*/
 					comSelect('1');				//この位置にあること
-					dimScan(R_UP,taskTime0);
-					dimScan(R_DN,taskTime0);
-					pswScan(BSIDE,taskTime0);		
+					if(ryCont(CARD,'r',0)==1) dimScan(R_UP,taskTime0);
+					if(ryCont(CARD,'r',0)==1) dimScan(R_DN,taskTime0);
+					if(ryCont(CARD,'r',0)==1) pswScan(BSIDE,taskTime0);		
 					pswScan(BED_R,taskTime0);
 					pswScan(BED_L,taskTime0);
 					pswScan(DESK,taskTime0);
@@ -481,9 +483,9 @@ void	AplCall(void){
 				
 				case 5: /*10ｍSで発生*/
 					comSelect('2');				//この位置にあること				
-					dimScan(B_UP,taskTime0);
-					dimScan(B_DN,taskTime0);
-					pswScan(BATH,taskTime0);
+					if(ryCont(CARD,'r',0)==1) dimScan(B_UP,taskTime0);
+					if(ryCont(CARD,'r',0)==1) dimScan(B_DN,taskTime0);
+					if(ryCont(CARD,'r',0)==1) pswScan(BATH,taskTime0);
 					pswScan(MIRR,taskTime0);
 					pswScan(K3,taskTime0);
 					pswScan(K4,taskTime0);
@@ -548,26 +550,6 @@ unsigned int outputTask(unsigned int cnt){
 	
 	}
 	return	cnt;
-}
-/*******************************************************************************
-* Function Name: 
-* Description  : メンテナンスSW 初期値を知る
-* Arguments    : Code
-* Return Value : None
-* Note:
-* History:
-*******************************************************************************/
-unsigned int iniSw(unsigned char num){
-	
-	
-	Delay(50000);
-	if(portScan(num)==1)	return 1;
-	Delay(5000);
-	if(portScan(num)==1)	return 1;
-	Delay(5000);
-	if(portScan(num)==1)	return 1;
-
-	return	0;	
 }
 /*******************************************************************************
 * Function Name: 
@@ -781,8 +763,8 @@ char	swSearch(unsigned char num){
 			break;
 
 		case BATH:
-			if(ryCont(BATH,'r',0)==0) bathDim =BRIGH;
-			else if(ryCont(BATH,'r',0)==1) 	bathDim =BOFF;
+			if(ryCont(BATH,'r',0)==0) bathDim= BRIGH;
+			else if(ryCont(BATH,'r',0)==1) 	bathDim= BOFF;
 			break;
 		case MIRR:		
 		case K3:		//以降STANDARDでは呼ばれない	
@@ -803,99 +785,7 @@ char	swSearch(unsigned char num){
 
 	return	num;
 }
-#if 0
-/*******************************************************************************
-* Function Name: 
-* Description  : 
-* Arguments    : Code
-* Return Value : None
-* Note:			ubyte_t 構造体
-* History:
-*******************************************************************************/
-unsigned int dimScan(unsigned char num, unsigned int cnt){
-	
-	static unsigned int lcnt[20]= {0};
-	static ubyte_t  swreg[20] = {OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF};		// SWレジスタ
-	static unsigned char	sema='\0';		//semaphore
-	unsigned char 	nowsw;
-	static unsigned int	tc;
-	
-	
-	if((lcnt[num]= ++lcnt[num] % cnt)== 0){
-		
-		nowsw = portScan(num);
-		swreg[num].b.b0 = nowsw;
-		
-		if((nowsw== ON)&& (swreg[num].b.b1== ON)&& (swreg[num].b.b2== ON)){	// 新旧データ3回連続SW_PUSH
-			
-			if(swreg[num].b.b3 == OFF){	// 3スキャン前がSW_OPEN
-			/* ONエッジ検出 */
-				if((num==R_UP)||(num==R_DN)){
-					if(sema==0){
-						sema='R';
-						tc =40;
-						//ryCont(BSIDE,'w',1);
-						if(num==R_UP && sideDim <BRIG) ++sideDim;
-						else if(num==R_DN && sideDim >DARK)	--sideDim;
-						else if(num==R_DN && sideDim <DARK) sideDim =DARK;
-					}
-				}
-				if((num==B_UP)||(num==B_DN)){
-					if(sema==0){
-						sema='B';
-						tc =40;
-						//ryCont(BATH,'w',1);
-						if(num==B_UP && bathDim <BRIG) ++bathDim;
-						else if(num==B_DN && bathDim >BDARK)	--bathDim;
-						else if(num==B_DN && bathDim <BDARK)	bathDim =BDARK;
-					}
-				}
-			}
-			
-			if(swreg[num].b.b3 == ON){		// 3スキャン前も0N
-			/* 連続押し */
-				if((num==R_UP)||(num==R_DN)){
-					if(sema=='R'){
-						if((tc= zeroWait(tc))== 0){
-							tc= 10;
-							if(num==R_UP && sideDim < BRIG)	++sideDim;
-							else if(num==R_DN && sideDim > DARK)	--sideDim;
-						}
-					}
-				}
-				if((num==B_UP)||(num==B_DN)){
-					if(sema=='B'){
-						if((tc= zeroWait(tc))== 0){
-							tc= 10;
-							if(num==B_UP && bathDim < BRIG)	++bathDim;
-							else if(num==B_DN && bathDim> BDARK)	--bathDim;
-						}
-					}
-				}
-			}
-		}	
-		if((nowsw==OFF)&& (swreg[num].b.b1==OFF)&& (swreg[num].b.b2==OFF)){
-			
-			if(swreg[num].b.b3 == ON){
-			/* OFFエッジ検出 */
-				if(num==B_UP||num==B_DN){
-					sema= '\0';
-				}
-				if(num==R_UP||num==R_DN){
-					sema= '\0';
-				}
-			}	
-			if(swreg[num].b.b3 == OFF){
-			/* 連続解放*/			
-			}
-		}		
-		swreg[num].b.b3 = swreg[num].b.b2;	// 3スキャン前旧データ更新
-		swreg[num].b.b2 = swreg[num].b.b1;	// 2スキャン前旧データ更新
-		swreg[num].b.b1 = nowsw;		// 1スキャン前旧データ更新
-	}
-	return cnt;
-}
-#endif
+
 
 #if 1
 /*******************************************************************************
@@ -1264,12 +1154,21 @@ void	portOut(unsigned char num, unsigned char data){
 void	cardOn(char num){		
 		
 		sideDim= DL50ON;
+		
 		bathDim= BOFF;		//DL50ON;	//BATH_DL
 		
 		ryCont(BATH,'w',0);
-		ryCont(FOOT,'w',0);
 		ryCont(MIRR,'w',0);
+		ryCont(FOOT,'w',0);
 		
+		if(num== 'f'){
+			
+			ryCont(CARD,'w',0);
+			ryCont(TV,'w',0);
+			ryCont(MAIN1,'w',0);
+			ryCont(MAIN2,'w',0);
+		}
+
 		if(num== 'c'){
 			
 			ryCont(CARD,'w',1);			// relay[0]= 1;
