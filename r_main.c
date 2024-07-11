@@ -109,7 +109,7 @@ Global variables and functions
 //#define	STANDARD	1
 
 
-//#define		release		1		//設定はここ
+#define		release		1		//設定はここ
 
 
 
@@ -220,8 +220,10 @@ const unsigned int dimnum[92]={
 
 
 
-unsigned char	bathDim = BDARK;		//BATH_DL
-unsigned char	sideDim = RDARK;		//BSIDE_DL
+unsigned char	bathDim = BOFF;		//BATH_DL
+unsigned char	lastDim = BOFF;
+
+unsigned char	sideDim = ROFF;		//BSIDE_DL
 unsigned char	dim3 = RDARK;
 
 
@@ -238,7 +240,7 @@ char	outmoni[]=	{	"main1=0 main2=0 k08=0 K09=0 K10=0 K11=0 K12=0 K13=0 K14=0 TVP
 
 
 /*****************************************************************
-functions																*/
+functions														*/
 
 
 void	zeroCross(void);
@@ -319,8 +321,8 @@ void main(void)
 
 	info();
 	
-	portOut(MAIN1,ryCont(MAIN1,'r',0));
-	portOut(MAIN2,ryCont(MAIN2,'r',0));
+	ryCont(MAIN1,'w',0);
+	ryCont(MAIN2,'w',0);
 		
 	bathDim= BOFF;		//DL50ON;	//BATH_DL
 	ryCont(BATH,'w',0);	
@@ -446,9 +448,11 @@ void Delay(unsigned long i){
 void	AplCall(void){
 	
 
-	static unsigned int	taskTime0= 1;		//10mS * 1
-	static unsigned int	taskTime1= 10;		//10mS * 10= 100mSec
-	static unsigned int	taskTime2= 20;		//10mS * 20= 200msec
+	static unsigned int	taskTime0= 1;		//40mS * 1
+	static unsigned int	taskTime1= 5;		//40mS * 5= 200mSec
+	static unsigned int	taskTime2= 10;		//40mS * 10= 400msec
+	
+	
 	static unsigned int	udTime1= 10;		//1mS * Universal
 	//static unsigned int	udTime2= 10;	//Universal
 	
@@ -457,15 +461,17 @@ void	AplCall(void){
 	for(;;){
 		
 		if(loopTimer != now){	//CountUpは 1mS
-			now =loopTimer;		//0-9を繰り返す
+			now =loopTimer;		//0-39を繰り返す
 		
 			switch(now){
 			
-				case 0:	/*10ｍSで発生*/
+				case 0:	/* 0ｍSで発生*/
 					comSelect('1');				//この位置にあること
-					if(ryCont(CARD,'r',0)==1) dimScan(R_UP,taskTime0);
-					if(ryCont(CARD,'r',0)==1) dimScan(R_DN,taskTime0);
-					if(ryCont(CARD,'r',0)==1) pswScan(BSIDE,taskTime0);		
+					break;
+				case 5:		
+					dimScan(R_UP,taskTime0);
+					dimScan(R_DN,taskTime0);
+					pswScan(BSIDE,taskTime0);		
 					pswScan(BED_R,taskTime0);
 					pswScan(BED_L,taskTime0);
 					pswScan(DESK,taskTime0);
@@ -473,19 +479,21 @@ void	AplCall(void){
 					comSelect('0');
 				
 					/* マルチプレックス無し*/
-					mainte(MAINT,taskTime2);	// メンテ用SW 200*7
-					rswScan(CARD,taskTime1);	// CARD 100*7
+					mainte(MAINT,taskTime2);	// メンテ用SW 400*7
+					rswScan(CARD,taskTime1);	// CARD 200*7
 					pswScan(DIST,taskTime0);		
 					pswScan(MAKE,taskTime0);
 					pswScan(CHIME,taskTime0);
 					rswScan(WORKS,taskTime2);	//LAN WORKSは200*7
 					break;
 				
-				case 5: /*10ｍSで発生*/
-					comSelect('2');				//この位置にあること				
-					if(ryCont(CARD,'r',0)==1) dimScan(B_UP,taskTime0);
-					if(ryCont(CARD,'r',0)==1) dimScan(B_DN,taskTime0);
-					if(ryCont(CARD,'r',0)==1) pswScan(BATH,taskTime0);
+				case 20: /* 20ｍSで発生*/
+					comSelect('2');				//この位置にあること
+					break;
+				case 25: 	
+					if(ryCont(MAIN1,'r',0)==1) dimScan(B_UP,taskTime0);
+					if(ryCont(MAIN1,'r',0)==1) dimScan(B_DN,taskTime0);
+					if(ryCont(MAIN1,'r',0)==1) pswScan(BATH,taskTime0);
 					pswScan(MIRR,taskTime0);
 					pswScan(K3,taskTime0);
 					pswScan(K4,taskTime0);
@@ -731,7 +739,10 @@ unsigned int pswScan(unsigned char num, unsigned int cnt){
 *******************************************************************************/
 char	swSearch(unsigned char num){
 	
+
+#ifndef	release
 	DebugPrint("SW=",(uint16_t)num);	//TEST
+#endif
 	
 	switch(num){			
 
@@ -763,8 +774,14 @@ char	swSearch(unsigned char num){
 			break;
 
 		case BATH:
-			if(ryCont(BATH,'r',0)==0) bathDim= BRIGH;
-			else if(ryCont(BATH,'r',0)==1) 	bathDim= BOFF;
+			if(ryCont(BATH,'r',0)==0){		//点灯時
+				//bathDim= BRIGH;
+				bathDim= lastDim;			//lastVew
+			}
+			else if(ryCont(BATH,'r',0)==1){	//消灯時
+				lastDim= bathDim;
+				bathDim= BOFF;
+			}
 			break;
 		case MIRR:		
 		case K3:		//以降STANDARDでは呼ばれない	
@@ -815,7 +832,7 @@ unsigned int dimScan(unsigned char num, unsigned int cnt){
 			if(swreg[num].b.b3 ==OFF){	// 3スキャン前がSW_OPEN
 			/* ONエッジ検出 */
 			
-				tc =40;
+				tc =10;			//40;
 				if(num==R_UP && sideDim <RRIGH) ++sideDim;
 				else if(num==R_DN &&sideDim >RDARK)	--sideDim;
 				else if(num==R_DN &&sideDim <RDARK) sideDim =RDARK;
@@ -830,7 +847,7 @@ unsigned int dimScan(unsigned char num, unsigned int cnt){
 					
 				if((tc =zeroWait(tc)) ==0){
 					
-					tc= 4;
+					tc= 3;		//4;
 					if(num==R_UP &&sideDim <RRIGH)	++sideDim;
 					else if(num==R_DN &&sideDim >RDARK)	--sideDim;
 				
@@ -1053,7 +1070,7 @@ void	comSelect(char num){
 * History:  	relay[25]= {0};	Card= 0
 *******************************************************************************/
 void	portOut(unsigned char num, unsigned char data){
-	
+
 #ifdef	STANDARD
 
 		if(num== DIST/*1*/)			P5_bit.no2= data;	// do not disturb
@@ -1078,6 +1095,7 @@ void	portOut(unsigned char num, unsigned char data){
 		//STANDARDにK3-K6は使用しない
 		
 #endif
+
 /*************************************************************************
 		JS3_T															*/
 
@@ -1109,7 +1127,7 @@ void	portOut(unsigned char num, unsigned char data){
 		else if(num== K4/*ROOM2 16*/)	P1_bit.no0= data;	// P1_0-> K4
 		else if(num== K5/*ROOM3 17*/)	P2_bit.no5= data;	// RY5 2-1 -> K11(DESK)
 		//else if(num== K6/*ROOM4 18*/)	P1_bit.no1= data;	// P1_1	K5
-
+		
 #endif
 
 
@@ -1154,8 +1172,7 @@ void	portOut(unsigned char num, unsigned char data){
 void	cardOn(char num){		
 		
 		sideDim= DL50ON;
-		
-		bathDim= BOFF;		//DL50ON;	//BATH_DL
+		lastDim= DL50ON;		//BATH_DL
 		
 		ryCont(BATH,'w',0);
 		ryCont(MIRR,'w',0);
