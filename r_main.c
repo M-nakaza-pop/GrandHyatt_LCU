@@ -96,7 +96,7 @@ Global variables and functions
 #define	K3			15
 #define	K4			16
 #define	K5			17
-#define	K6			18			//増設
+#define	K6			18			//増設p
 #define	WORKS		19
 #define	MAINT		23
 
@@ -104,8 +104,8 @@ Global variables and functions
 
 //#define	DL3		1			//設定はここ
 //#define	JS1		1
-#define	JS3_T	1
-//#define	JS3_K 	1
+//#define	JS3_T	1
+#define	JS3_K 	1
 //#define	STANDARD	1
 
 
@@ -185,7 +185,7 @@ const unsigned int dimnum[160]={
 
 #define BOFF	BDARK-1
 #define ROFF	RDARK-1
-#define DL50ON	50		// RRIGH 立ち上がり50%
+#define DL50ON	33		// RRIGH 立ち上がり50%
 
 
 #else
@@ -207,14 +207,14 @@ const unsigned int dimnum[92]={
 };
 
 #define BDARK	25		//19 LED		//Bath 0x0E00-- 32段
-#define BRIGH	80		//48 LED		//BRIGHT 明るい MAX
+#define BRIGH	79		//48 LED		//BRIGHT 明るい MAX
 
-#define RDARK	5		//DARK 暗い	MIN 0x0500 0x0500-- 64段
+#define RDARK	25		//DARK 暗い	MIN 0x0500 0x0500-- 64段
 #define	RRIGH	79
 
 #define BOFF	BDARK-1
 #define ROFF	RDARK-1
-#define DL50ON	30		// RRIGH 立ち上がり50%
+#define DL50ON	33		// RRIGH 立ち上がり50%
 
 #endif
 
@@ -224,6 +224,7 @@ unsigned char	bathDim = BOFF;		//BATH_DL
 unsigned char	lastDim = BOFF;
 
 unsigned char	sideDim = ROFF;		//BSIDE_DL
+unsigned char	lastside= ROFF;
 unsigned char	dim3 = RDARK;
 
 
@@ -466,9 +467,7 @@ void	AplCall(void){
 			switch(now){
 			
 				case 0:	/* 0ｍSで発生*/
-					comSelect('1');				//この位置にあること
-					break;
-				case 5:		
+					comSelect('1');				//予備的なもの		
 					dimScan(R_UP,taskTime0);
 					dimScan(R_DN,taskTime0);
 					pswScan(BSIDE,taskTime0);		
@@ -477,6 +476,7 @@ void	AplCall(void){
 					pswScan(DESK,taskTime0);
 					pswScan(FOOT,taskTime0);	
 					comSelect('0');
+					comSelect('2');				//この位置にあること
 				
 					/* マルチプレックス無し*/
 					mainte(MAINT,taskTime2);	// メンテ用SW 400*7
@@ -486,11 +486,11 @@ void	AplCall(void){
 					pswScan(CHIME,taskTime0);
 					rswScan(WORKS,taskTime2);	//LAN WORKSは200*7
 					break;
+					
+					
 				
 				case 20: /* 20ｍSで発生*/
-					comSelect('2');				//この位置にあること
-					break;
-				case 25: 	
+					comSelect('2');				//予備的なもの
 					if(ryCont(MAIN1,'r',0)==1) dimScan(B_UP,taskTime0);
 					if(ryCont(MAIN1,'r',0)==1) dimScan(B_DN,taskTime0);
 					if(ryCont(MAIN1,'r',0)==1) pswScan(BATH,taskTime0);
@@ -502,7 +502,8 @@ void	AplCall(void){
 #ifndef	STANDARD				
 					pswScan(K6,taskTime0);	//増設分
 #endif
-					comSelect('0');	
+					comSelect('0');
+					comSelect('1');			//この位置にあること
 					break;
 				
 				default:
@@ -750,11 +751,16 @@ char	swSearch(unsigned char num){
 			break;
 			
 		case BSIDE:
-			if(ryCont(BSIDE,'r',0)==0) sideDim =DL50ON;
-			else if(ryCont(BSIDE,'r',0)==1)	sideDim =ROFF;
+			if(ryCont(BSIDE,'r',0)==0){		//
+				sideDim= lastside;
+			}
+			else if(ryCont(BSIDE,'r',0)==1){
+				lastside= sideDim;
+				sideDim =ROFF;
+			}
 			break;
 		case WORKS:
-			if(ryCont(CARD,'r',0)==0){// CARD有りではwelcome ONしない(誤動作防止の為)
+			if(ryCont(CARD,'r',0)==0){		// CARD有りではwelcome ONしない(誤動作防止の為)
 				
 				cardOn('f');
 			}
@@ -1171,8 +1177,9 @@ void	portOut(unsigned char num, unsigned char data){
 *******************************************************************************/
 void	cardOn(char num){		
 		
-		sideDim= DL50ON;
-		lastDim= DL50ON;		//BATH_DL
+		//sideDim= DL50ON;
+		sideDim= lastside= DL50ON;
+		lastDim= BRIGH;		//BATH_DL
 		
 		ryCont(BATH,'w',0);
 		ryCont(MIRR,'w',0);
