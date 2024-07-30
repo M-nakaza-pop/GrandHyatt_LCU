@@ -102,12 +102,12 @@ Global variables and functions
 
 
 
-//#define	DL3		1			//ê›íËÇÕÇ±Ç±
+//#define	DL3SP		1			//ê›íËÇÕÇ±Ç±
+//#define	DL3		1
 //#define	JS1		1
 //#define	JS3_T	1
 #define	JS3_K 	1
 //#define	STANDARD	1
-
 
 #define		release		1		//ê›íËÇÕÇ±Ç±
 
@@ -769,9 +769,14 @@ char	swSearch(unsigned char num){
 			if(ryCont(DIST,'r',0)==0)	ryCont(CHIME,'w',1);
 			break;
 		case DIST:
-			if(ryCont(CARD,'r',0)==0)	break;
+			//if(ryCont(CARD,'r',0)==0)	break;
+			if(ryCont(MAKE,'r',0)==0)	ryCont(num,'w',!(ryCont(num,'r',0)));	//îΩì]
+			break;
 			
 		case MAKE:
+			if(ryCont(DIST,'r',0)==0)	ryCont(num,'w',!(ryCont(num,'r',0)));	//îΩì]
+			break;
+			
 		case BED_R:
 		case BED_L:
 		case FOOT:
@@ -1117,7 +1122,7 @@ void	portOut(unsigned char num, unsigned char data){
 		else if(num==BED_L/*8*/)	P2_bit.no7= data;	// RY7 2-3 -> K13(BED_L)
 		
 		//else if(num== DESK/*9*/)	P2_bit.no5= data;	// RY5 2-1 -> K11(DESK)
-		else if(num== DESK/*9*/)	P1_bit.no1= data;	// -> K5(DESK)
+		//else if(num== DESK/*9*/)	P1_bit.no1= data;	// -> K5(DESK)
 		
 		else if(num== FOOT/*10*/) 	P2_bit.no4= data;	// RY4 1-3 -> K9 (MIRRER FOOT)
 		//			11	B_UP@
@@ -1132,13 +1137,13 @@ void	portOut(unsigned char num, unsigned char data){
 		else if(num== K3/*ROOM1 15*/)	P14_bit.no6=data;	// P14_6->K3
 		else if(num== K4/*ROOM2 16*/)	P1_bit.no0= data;	// P1_0-> K4
 		else if(num== K5/*ROOM3 17*/)	P2_bit.no5= data;	// RY5 2-1 -> K11(DESK)
-		//else if(num== K6/*ROOM4 18*/)	P1_bit.no1= data;	// P1_1	K5
+		else if(num== K6/*ROOM4 18*/)	P1_bit.no1= data;	// P1_1	K5
 		
 #endif
 
 
 
-#if defined(JS1) || defined(JS3_K) || defined(DL3)
+#if defined(JS1) || defined(JS3_K) || defined(DL3SP) || defined(DL3)
 
 		if(num== DIST/*1*/)			P5_bit.no2= data;	// do not disturb
 		else if(num== MAKE/*2*/)	P5_bit.no3= data;	// make up room
@@ -1205,8 +1210,13 @@ void	cardOn(char num){
 		ryCont(BSIDE,'w',1);
 		
 		
+#ifdef	DL3SP		
+		ryCont(K5,'w',1);
+#endif
+
 #ifdef	DL3		
 		ryCont(K5,'w',1);
+		ryCont(K4,'w',1);
 #endif
 
 #ifdef	JS1
@@ -1234,7 +1244,7 @@ void	cardOff(void){
 									// ALL_OFF slowOutÇÃà◊ÇÃÇ±ÇÃï˚éÆ
 		//ryCont(OFFCMD,'w',MAIN2);	// MAIN2ÇÕENDåìóp			
 		ryCont(CARD,'w',0);			// relay[0]= 0;
-		ryCont(DIST,'w',0);
+		//ryCont(DIST,'w',0);		DIST CARDÇ©ÇÁèúäO
 		ryCont(DESK,'w',0);
 		ryCont(FOOT,'w',0);
 		ryCont(BSIDE,'w',0);
@@ -1319,6 +1329,10 @@ void	info(void){
 
 #ifdef	DL3
 	sprintf(buf ,"DL3 DATE is %s \n" ,__DATE__);
+#endif	
+	
+#ifdef	DL3SP
+	sprintf(buf ,"DL3SP DATE is %s \n" ,__DATE__);
 #endif
 
 #ifdef JS1
