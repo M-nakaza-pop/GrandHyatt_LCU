@@ -1,13 +1,24 @@
 #cs+
+*.mtpj
 *.mtud
 *.rcpe
-*mtud
+*.mtud
 *.bak
-SmartManual Docs/
-DepFilesTmp/
-DepFilesTemp/
-DepFilesTemp/
-!/.DefaultBuild/*.mot
+*.abs
+*.clnk
+*.lk.ud
+*.map
+*.asm
+*.udm
+
+*.txt
+
+/SmartManual Docs/
+/DepFilesTmp/
+/DepFiles/
+/DepFilesTemp/
+/DefaultBuild/*
+!/DefaultBuild/*.mot
 
 
 # Prerequisites
