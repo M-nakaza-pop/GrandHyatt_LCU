@@ -1,0 +1,63 @@
+[33mcommit 66a726a8f981e23e62994026f51c85f62eea4db8[m[33m ([m[1;31morigin/topic[m[33m, [m[1;32mtopic[m[33m)[m
+Author: dynabook <jazz.minus.one@gmail.com>
+Date:   Tue Jul 30 16:50:27 2024 +0900
+
+    DIST/RoomKeep SWitch制御
+
+[33mcommit 9ee05671ebd5dd7c9a386e556acd0781ee72eccb[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: new-system-EMG <45838209+M-nakaza-pop@users.noreply.github.com>
+Date:   Tue Jul 30 16:47:02 2024 +0900
+
+    Update .gitignore
+
+[33mcommit ae477aa75646800b09e457ac2a96ef742132fdd2[m
+Author: dynabook <jazz.minus.one@gmail.com>
+Date:   Fri Jul 12 17:32:35 2024 +0900
+
+    Hayyt現地調整
+
+[33mcommit 07da12b00c263d8ded9c78196239b4b4b1b52c4b[m
+Author: dynabook <jazz.minus.one@gmail.com>
+Date:   Thu Jul 11 18:52:20 2024 +0900
+
+    scan間隔変更
+
+[33mcommit 5fe977641eb9849bc498831c783698a3670af363[m
+Author: dynabook <jazz.minus.one@gmail.com>
+Date:   Wed Jun 12 17:50:53 2024 +0900
+
+    CAED_ONでpswScan
+
+[33mcommit 61fdb79ace4f9e4c9702180e9e651dbdd618e3f7[m
+Author: dynabook <jazz.minus.one@gmail.com>
+Date:   Tue Jun 11 16:09:10 2024 +0900
+
+    #elifは止めた方がよい
+
+[33mcommit 57403b313b4a4037b6295594761cc2254acfa900[m
+Author: dynabook <jazz.minus.one@gmail.com>
+Date:   Fri Jun 7 13:38:13 2024 +0900
+
+    Aplcall側でfor Loop
+
+[33mcommit 217d00cbe681fa47c4305c768d81a2d01a169e97[m
+Author: new-system-EMG <45838209+M-nakaza-pop@users.noreply.github.com>
+Date:   Thu Jun 6 13:17:36 2024 +0900
+
+    Update .gitignore
+    
+    CS+
+
+[33mcommit 185e5e7be98e5998c1cbb052c402374671c0b67c[m
+Author: new-system-EMG <45838209+M-nakaza-pop@users.noreply.github.com>
+Date:   Thu Jun 6 12:34:18 2024 +0900
+
+    Add files via upload
+    
+    2024-06-06 統合型未TEST
+
+[33mcommit 18437139fbf1a2884208c3513c002829675af2bd[m
+Author: new-system-EMG <45838209+M-nakaza-pop@users.noreply.github.com>
+Date:   Thu Jun 6 12:24:44 2024 +0900
+
+    Initial commit

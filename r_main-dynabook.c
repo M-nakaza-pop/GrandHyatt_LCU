@@ -46,6 +46,9 @@ Includes
 Pragma directive
 ***********************************************************************************************************************/
 /* Start user code for pragma. Do not edit comment generated here */
+
+
+
 /* End user code. Do not edit comment generated here */
 
 /***********************************************************************************************************************
@@ -96,20 +99,18 @@ Global variables and functions
 #define	K3			15
 #define	K4			16
 #define	K5			17
-#define	K6			18			//増設p
+#define	K6			18			//増設
 #define	WORKS		19
 #define	MAINT		23
 
 
-
-//#define	DL3SP		1			//設定はここ
-//#define	DL3		1
+#define	STANDARD	1
+//#define	DL3		1			//設定はここ
 //#define	JS1		1
-#define	JS3_T	1
+//#define	JS3_T	1
 //#define	JS3_K 	1
-//#define	STANDARD	1
 
-#define		release		1		//設定はここ
+
 
 
 
@@ -185,7 +186,7 @@ const unsigned int dimnum[160]={
 
 #define BOFF	BDARK-1
 #define ROFF	RDARK-1
-#define DL50ON	33		// RRIGH 立ち上がり50%
+#define DL50ON	50		// RRIGH 立ち上がり50%
 
 
 #else
@@ -207,24 +208,21 @@ const unsigned int dimnum[92]={
 };
 
 #define BDARK	25		//19 LED		//Bath 0x0E00-- 32段
-#define BRIGH	79		//48 LED		//BRIGHT 明るい MAX
+#define BRIGH	80		//48 LED		//BRIGHT 明るい MAX
 
-#define RDARK	25		//DARK 暗い	MIN 0x0500 0x0500-- 64段
+#define RDARK	5		//DARK 暗い	MIN 0x0500 0x0500-- 64段
 #define	RRIGH	79
 
 #define BOFF	BDARK-1
 #define ROFF	RDARK-1
-#define DL50ON	33		// RRIGH 立ち上がり50%
+#define DL50ON	30		// RRIGH 立ち上がり50%
 
 #endif
 
 
 
-unsigned char	bathDim = BOFF;		//BATH_DL
-unsigned char	lastDim = BOFF;
-
-unsigned char	sideDim = ROFF;		//BSIDE_DL
-unsigned char	lastside= ROFF;
+unsigned char	bathDim = BDARK;		//BATH_DL
+unsigned char	sideDim = RDARK;		//BSIDE_DL
 unsigned char	dim3 = RDARK;
 
 
@@ -235,13 +233,6 @@ char	gbuf[10];
 
 
 unsigned int	gTime =10;
-
-char	outmoni[]=	{	"main1=0 main2=0 k08=0 K09=0 K10=0 K11=0 K12=0 K13=0 K14=0 TVP=0 CHM=0 K03=0 K04=0 K05=0 EXT=0 \n"	};
-					
-
-
-/*****************************************************************
-functions														*/
 
 
 void	zeroCross(void);
@@ -266,7 +257,7 @@ unsigned int 	ledCall(unsigned int cnt);
 void			cardOn(char num);
 void			cardOff(void);
 char			swSearch(unsigned char num);
-
+unsigned int 	iniSw(unsigned char num);
 unsigned int 	mainte(unsigned char num, unsigned int cnt);
 unsigned int 	zeroWait(unsigned int j);
 unsigned int 	outputTask(unsigned int cnt);
@@ -274,7 +265,7 @@ uint8_t			serialPrint0(char *buff, unsigned int num);
 void			serialEnd(void);
 void			info(void);
 void			DebugPrint(int8_t *s,uint16_t n);
-void			outMoni(void);
+
 
 /*--------------------------------------------------------------------
 		<<機種依存しないビット単位アクセス可能なユーザ型定義>>
@@ -322,19 +313,29 @@ void main(void)
 
 	info();
 	
-	ryCont(MAIN1,'w',0);
-	ryCont(MAIN2,'w',0);
-		
-	bathDim= BOFF;		//DL50ON;	//BATH_DL
-	ryCont(BATH,'w',0);	
+	Delay(50000);
+	rswScan(CARD,1);
+	Delay(5000);
+	rswScan(CARD,1);
+	Delay(5000);
+	rswScan(CARD,1);
+	Delay(5000);
+	rswScan(CARD,1);
+	Delay(5000);
 	
-	ryCont(FOOT,'w',0);
-	ryCont(DESK,'w',0);
+	if(ryCont(CARD,'r',0)==1){
 		
-	sideDim= ROFF;
-	ryCont(BSIDE,'w',0);		
-	ryCont(TV,'w',0);	
-
+		bathDim= DL50ON;				//BATH_DL
+		ryCont(BATH,'w',1);
+		
+		ryCont(FOOT,'w',1);
+		ryCont(DESK,'w',0);
+		
+		sideDim= ROFF;
+		ryCont(BSIDE,'w',0);
+		
+		ryCont(TV,'w',0);	
+	}
 	
     while (1U){
        	//P12_bit.no0 = 1;
@@ -449,25 +450,22 @@ void Delay(unsigned long i){
 void	AplCall(void){
 	
 
-	static unsigned int	taskTime0= 1;		//40mS * 1
-	static unsigned int	taskTime1= 5;		//40mS * 5= 200mSec
-	static unsigned int	taskTime2= 10;		//40mS * 10= 400msec
-	
-	
+	static unsigned int	taskTime0= 1;		//10mS * 1
+	static unsigned int	taskTime1= 10;		//10mS * 10= 100mSec
+	static unsigned int	taskTime2= 20;		//10mS * 20= 200msec
 	static unsigned int	udTime1= 10;		//1mS * Universal
 	//static unsigned int	udTime2= 10;	//Universal
 	
 	static unsigned char	now= 0;
 
 	for(;;){
-		
 		if(loopTimer != now){	//CountUpは 1mS
-			now =loopTimer;		//0-39を繰り返す
+			now =loopTimer;		//0-9を繰り返す
 		
 			switch(now){
 			
-				case 0:	/* 0ｍSで発生*/
-					comSelect('1');				//予備的なもの		
+				case 0:	/*10ｍSで発生*/
+					comSelect('1');				//この位置にあること
 					dimScan(R_UP,taskTime0);
 					dimScan(R_DN,taskTime0);
 					pswScan(BSIDE,taskTime0);		
@@ -476,34 +474,29 @@ void	AplCall(void){
 					pswScan(DESK,taskTime0);
 					pswScan(FOOT,taskTime0);	
 					comSelect('0');
-					comSelect('2');				//この位置にあること
 				
 					/* マルチプレックス無し*/
-					mainte(MAINT,taskTime2);	// メンテ用SW 400*7
-					rswScan(CARD,taskTime1);	// CARD 200*7
+					mainte(MAINT,taskTime2);	// メンテ用SW 200*7
+					rswScan(CARD,taskTime1);	// CARD 100*7
 					pswScan(DIST,taskTime0);		
 					pswScan(MAKE,taskTime0);
 					pswScan(CHIME,taskTime0);
 					rswScan(WORKS,taskTime2);	//LAN WORKSは200*7
 					break;
-					
-					
 				
-				case 20: /* 20ｍSで発生*/
-					comSelect('2');				//予備的なもの
-					if(ryCont(MAIN1,'r',0)==1) dimScan(B_UP,taskTime0);
-					if(ryCont(MAIN1,'r',0)==1) dimScan(B_DN,taskTime0);
-					if(ryCont(MAIN1,'r',0)==1) pswScan(BATH,taskTime0);
+				case 5: /*10ｍSで発生*/
+					comSelect('2');				//この位置にあること				
+					dimScan(B_UP,taskTime0);
+					dimScan(B_DN,taskTime0);
+					pswScan(BATH,taskTime0);
 					pswScan(MIRR,taskTime0);
 					pswScan(K3,taskTime0);
 					pswScan(K4,taskTime0);
 					pswScan(K5,taskTime0);
-					
 #ifndef	STANDARD				
 					pswScan(K6,taskTime0);	//増設分
 #endif
-					comSelect('0');
-					comSelect('1');			//この位置にあること
+					comSelect('0');	
 					break;
 				
 				default:
@@ -516,7 +509,7 @@ void	AplCall(void){
 					portOut(BSIDE,ryCont(BSIDE,'r',0));
 					portOut(BED_R,ryCont(BED_R,'r',0));
 					portOut(BED_L,ryCont(BED_L,'r',0));
-					portOut(DESK,ryCont(DESK,'r',0));
+		
 					portOut(BATH,ryCont(BATH,'r',0));
 					portOut(MIRR,ryCont(MIRR,'r',0));
 					portOut(K3,ryCont(K3,'r',0));
@@ -525,7 +518,7 @@ void	AplCall(void){
 				
 #ifndef	STANDARD				
 					portOut(K6,ryCont(K6,'r',0));	//増設
-#endif			
+#endif				
 					portOut(TV,ryCont(TV,'r',0));
 		
 					gTime =outputTask(gTime);
@@ -559,6 +552,26 @@ unsigned int outputTask(unsigned int cnt){
 	
 	}
 	return	cnt;
+}
+/*******************************************************************************
+* Function Name: 
+* Description  : メンテナンスSW 初期値を知る
+* Arguments    : Code
+* Return Value : None
+* Note:
+* History:
+*******************************************************************************/
+unsigned int iniSw(unsigned char num){
+	
+	
+	Delay(50000);
+	if(portScan(num)==1)	return 1;
+	Delay(5000);
+	if(portScan(num)==1)	return 1;
+	Delay(5000);
+	if(portScan(num)==1)	return 1;
+
+	return	0;	
 }
 /*******************************************************************************
 * Function Name: 
@@ -740,10 +753,7 @@ unsigned int pswScan(unsigned char num, unsigned int cnt){
 *******************************************************************************/
 char	swSearch(unsigned char num){
 	
-
-#ifndef	release
 	DebugPrint("SW=",(uint16_t)num);	//TEST
-#endif
 	
 	switch(num){			
 
@@ -751,16 +761,11 @@ char	swSearch(unsigned char num){
 			break;
 			
 		case BSIDE:
-			if(ryCont(BSIDE,'r',0)==0){		//
-				sideDim= lastside;
-			}
-			else if(ryCont(BSIDE,'r',0)==1){
-				lastside= sideDim;
-				sideDim =ROFF;
-			}
+			if(ryCont(BSIDE,'r',0)==0) sideDim =DL50ON;
+			else if(ryCont(BSIDE,'r',0)==1)	sideDim =ROFF;
 			break;
 		case WORKS:
-			if(ryCont(CARD,'r',0)==0){		// CARD有りではwelcome ONしない(誤動作防止の為)
+			if(ryCont(CARD,'r',0)==0){// CARD有りではwelcome ONしない(誤動作防止の為)
 				
 				cardOn('f');
 			}
@@ -769,51 +774,127 @@ char	swSearch(unsigned char num){
 			if(ryCont(DIST,'r',0)==0)	ryCont(CHIME,'w',1);
 			break;
 		case DIST:
-			//if(ryCont(CARD,'r',0)==0)	break;
-			if(ryCont(MAKE,'r',0)==0)	ryCont(num,'w',!(ryCont(num,'r',0)));	//反転
-			break;
-			
+			if(ryCont(CARD,'r',0)==0)	break;	
 		case MAKE:
-			if(ryCont(DIST,'r',0)==0)	ryCont(num,'w',!(ryCont(num,'r',0)));	//反転
-			break;
-			
 		case BED_R:
 		case BED_L:
-		case FOOT:
 		case DESK:
+		case FOOT:
 			ryCont(num,'w',!(ryCont(num,'r',0)));	//反転
 			break;
-
+		
 		case BATH:
-			if(ryCont(BATH,'r',0)==0){		//点灯時
-				//bathDim= BRIGH;
-				bathDim= lastDim;			//lastVew
-			}
-			else if(ryCont(BATH,'r',0)==1){	//消灯時
-				lastDim= bathDim;
-				bathDim= BOFF;
-			}
+			if(ryCont(BATH,'r',0)==0) bathDim =BRIGH;
+			else if(ryCont(BATH,'r',0)==1) 	bathDim =BOFF;
 			break;
-		case MIRR:		
-		case K3:		//以降STANDARDでは呼ばれない	
+		case MIRR:
+		case K3:
 		case K4:
 		case K5:
+		
+#ifndef	STANDARD
 		case K6:
+#endif
 			ryCont(num,'w',!(ryCont(num,'r',0)));	//反転
 			break;
-			
-			
-		default:
-			break;
-	}
 	
-#ifndef	release
-	outMoni();			//TEST
-#endif
-
+		default:	break;
+	}
 	return	num;
 }
-
+#if 0
+/*******************************************************************************
+* Function Name: 
+* Description  : 
+* Arguments    : Code
+* Return Value : None
+* Note:			ubyte_t 構造体
+* History:
+*******************************************************************************/
+unsigned int dimScan(unsigned char num, unsigned int cnt){
+	
+	static unsigned int lcnt[20]= {0};
+	static ubyte_t  swreg[20] = {OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF};		// SWレジスタ
+	static unsigned char	sema='\0';		//semaphore
+	unsigned char 	nowsw;
+	static unsigned int	tc;
+	
+	
+	if((lcnt[num]= ++lcnt[num] % cnt)== 0){
+		
+		nowsw = portScan(num);
+		swreg[num].b.b0 = nowsw;
+		
+		if((nowsw== ON)&& (swreg[num].b.b1== ON)&& (swreg[num].b.b2== ON)){	// 新旧データ3回連続SW_PUSH
+			
+			if(swreg[num].b.b3 == OFF){	// 3スキャン前がSW_OPEN
+			/* ONエッジ検出 */
+				if((num==R_UP)||(num==R_DN)){
+					if(sema==0){
+						sema='R';
+						tc =40;
+						//ryCont(BSIDE,'w',1);
+						if(num==R_UP && sideDim <BRIG) ++sideDim;
+						else if(num==R_DN && sideDim >DARK)	--sideDim;
+						else if(num==R_DN && sideDim <DARK) sideDim =DARK;
+					}
+				}
+				if((num==B_UP)||(num==B_DN)){
+					if(sema==0){
+						sema='B';
+						tc =40;
+						//ryCont(BATH,'w',1);
+						if(num==B_UP && bathDim <BRIG) ++bathDim;
+						else if(num==B_DN && bathDim >BDARK)	--bathDim;
+						else if(num==B_DN && bathDim <BDARK)	bathDim =BDARK;
+					}
+				}
+			}
+			
+			if(swreg[num].b.b3 == ON){		// 3スキャン前も0N
+			/* 連続押し */
+				if((num==R_UP)||(num==R_DN)){
+					if(sema=='R'){
+						if((tc= zeroWait(tc))== 0){
+							tc= 10;
+							if(num==R_UP && sideDim < BRIG)	++sideDim;
+							else if(num==R_DN && sideDim > DARK)	--sideDim;
+						}
+					}
+				}
+				if((num==B_UP)||(num==B_DN)){
+					if(sema=='B'){
+						if((tc= zeroWait(tc))== 0){
+							tc= 10;
+							if(num==B_UP && bathDim < BRIG)	++bathDim;
+							else if(num==B_DN && bathDim> BDARK)	--bathDim;
+						}
+					}
+				}
+			}
+		}	
+		if((nowsw==OFF)&& (swreg[num].b.b1==OFF)&& (swreg[num].b.b2==OFF)){
+			
+			if(swreg[num].b.b3 == ON){
+			/* OFFエッジ検出 */
+				if(num==B_UP||num==B_DN){
+					sema= '\0';
+				}
+				if(num==R_UP||num==R_DN){
+					sema= '\0';
+				}
+			}	
+			if(swreg[num].b.b3 == OFF){
+			/* 連続解放*/			
+			}
+		}		
+		swreg[num].b.b3 = swreg[num].b.b2;	// 3スキャン前旧データ更新
+		swreg[num].b.b2 = swreg[num].b.b1;	// 2スキャン前旧データ更新
+		swreg[num].b.b1 = nowsw;		// 1スキャン前旧データ更新
+	}
+	return cnt;
+}
+#endif
 
 #if 1
 /*******************************************************************************
@@ -843,7 +924,7 @@ unsigned int dimScan(unsigned char num, unsigned int cnt){
 			if(swreg[num].b.b3 ==OFF){	// 3スキャン前がSW_OPEN
 			/* ONエッジ検出 */
 			
-				tc =10;			//40;
+				tc =40;
 				if(num==R_UP && sideDim <RRIGH) ++sideDim;
 				else if(num==R_DN &&sideDim >RDARK)	--sideDim;
 				else if(num==R_DN &&sideDim <RDARK) sideDim =RDARK;
@@ -858,7 +939,7 @@ unsigned int dimScan(unsigned char num, unsigned int cnt){
 					
 				if((tc =zeroWait(tc)) ==0){
 					
-					tc= 3;		//4;
+					tc= 4;
 					if(num==R_UP &&sideDim <RRIGH)	++sideDim;
 					else if(num==R_DN &&sideDim >RDARK)	--sideDim;
 				
@@ -1068,22 +1149,14 @@ void	comSelect(char num){
 }
 /*******************************************************************************
 * Function Name: 
-* Description  : 
-*				P14_6 	K3
-*				P1_0 	K4
-*				P1_1	K5
-*				P1_2	K1
-*				P13_0	K2
-*				
+* Description  : 出力
 * Arguments    : Code
 * Return Value : None
 * Note:			Ry= 12個 chime= 1 LED= 2
 * History:  	relay[25]= {0};	Card= 0
 *******************************************************************************/
 void	portOut(unsigned char num, unsigned char data){
-
-#ifdef	STANDARD
-
+	
 		if(num== DIST/*1*/)			P5_bit.no2= data;	// do not disturb
 		else if(num== MAKE/*2*/)	P5_bit.no3= data;	// make up room
 		else if(num==CHIME/*3*/)	P13_bit.no0=data;	// RY13-> K2(chime)
@@ -1092,85 +1165,33 @@ void	portOut(unsigned char num, unsigned char data){
 		else if(num==BSIDE/*6*/)	P14_bit.no7=data;	// RY8 2-4 -> K14(DIM2)
 		else if(num==BED_R/*7*/)	P2_bit.no6= data;	// RY6 2-2 -> K12(BED_R)
 		else if(num==BED_L/*8*/)	P2_bit.no7= data;	// RY7 2-3 -> K13(BED_L)
+
+#ifdef	JS3_T
+		else if(num== DESK/*9*/)	P1_bit.no1= data;
+#else		
 		else if(num== DESK/*9*/)	P2_bit.no5= data;	// RY5 2-1 -> K11(DESK)
+#endif		
 		else if(num== FOOT/*10*/) 	P2_bit.no4= data;	// RY4 1-3 -> K9 (MIRRER FOOT)
 		//			11	B_UP
 		//			12	B_DN
 		else if(num== BATH/*13*/)	P2_bit.no3= data;	// RY3 1-2 -> K10(DIM1)
 		else if(num== MIRR/*14*/)	P2_bit.no2= data;	// RY2 1-1-> K8 (MIRRER)
 		
-		else if(num== TV/*19*/)		P1_bit.no2= data;	// RY12-> K1(TV)
-		else if(num== MAIN1/*20*/)	P2_bit.no0= data;	// RY0 -> K6(MAS1)
-		else if(num== MAIN2/*21*/)	P2_bit.no1= data;	// RY1 -> K7(MAS2)
+		else if(num== K3/*ROOM1 15*/)	P14_bit.no6=data;	// RY9 -> K3
+		else if(num== K4/*ROOM2 16*/)	P1_bit.no0= data;	// RY10-> K4
 		
-		//STANDARDにK3-K6は使用しない
-		
-#endif
-
-/*************************************************************************
-		JS3_T															*/
-
 #ifdef	JS3_T
-
-		if(num== DIST/*1*/)			P5_bit.no2= data;	// do not disturb
-		else if(num== MAKE/*2*/)	P5_bit.no3= data;	// make up room
-		else if(num==CHIME/*3*/)	P13_bit.no0=data;	// RY13-> K2(chime)
-		//			4	R_UP
-		//			5	R_DN
-		else if(num==BSIDE/*6*/)	P14_bit.no7=data;	// RY8 2-4 -> K14(DIM2)
-		else if(num==BED_R/*7*/)	P2_bit.no6= data;	// RY6 2-2 -> K12(BED_R)
-		else if(num==BED_L/*8*/)	P2_bit.no7= data;	// RY7 2-3 -> K13(BED_L)
-		
-		//else if(num== DESK/*9*/)	P2_bit.no5= data;	// RY5 2-1 -> K11(DESK)
-		else if(num== DESK/*9*/)	P1_bit.no1= data;	// -> K5(DESK) これか？
-		
-		else if(num== FOOT/*10*/) 	P2_bit.no4= data;	// RY4 1-3 -> K9 (MIRRER FOOT)
-		//			11	B_UP@
-		//			12	B_DN
-		else if(num== BATH/*13*/)	P2_bit.no3= data;	// RY3 1-2 -> K10(DIM1)
-		else if(num== MIRR/*14*/)	P2_bit.no2= data;	// RY2 1-1-> K8 (MIRRER)
-		
-		else if(num== TV/*19*/)		P1_bit.no2= data;	// RY12-> K1(TV)
-		else if(num== MAIN1/*20*/)	P2_bit.no0= data;	// RY0 -> K6(MAS1)
-		else if(num== MAIN2/*21*/)	P2_bit.no1= data;	// RY1 -> K7(MAS2)
-	
-		else if(num== K3/*ROOM1 15*/)	P14_bit.no6=data;	// P14_6->K3
-		else if(num== K4/*ROOM2 16*/)	P1_bit.no0= data;	// P1_0-> K4
-		else if(num== K5/*ROOM3 17*/)	P2_bit.no5= data;	// RY5 2-1 -> K11(DESK)
-		//else if(num== K6/*ROOM4 18*/)	P1_bit.no1= data;	// P1_1	K5
-		
-#endif
-
-
-
-#if defined(JS1) || defined(JS3_K) || defined(DL3SP) || defined(DL3)
-
-		if(num== DIST/*1*/)			P5_bit.no2= data;	// do not disturb
-		else if(num== MAKE/*2*/)	P5_bit.no3= data;	// make up room
-		else if(num==CHIME/*3*/)	P13_bit.no0=data;	// RY13-> K2(chime)
-		//			4	R_UP
-		//			5	R_DN
-		else if(num==BSIDE/*6*/)	P14_bit.no7=data;	// RY8 2-4 -> K14(DIM2)
-		else if(num==BED_R/*7*/)	P2_bit.no6= data;	// RY6 2-2 -> K12(BED_R)
-		else if(num==BED_L/*8*/)	P2_bit.no7= data;	// RY7 2-3 -> K13(BED_L)
-		else if(num== DESK/*9*/)	P2_bit.no5= data;	// RY5 2-1 -> K11(DESK)
-		else if(num== FOOT/*10*/) 	P2_bit.no4= data;	// RY4 1-3 -> K9 (MIRRER FOOT)
-		//			11	B_UP@
-		//			12	B_DN
-		else if(num== BATH/*13*/)	P2_bit.no3= data;	// RY3 1-2 -> K10(DIM1)
-		else if(num== MIRR/*14*/)	P2_bit.no2= data;	// RY2 1-1-> K8 (MIRRER)
-		
-		else if(num== TV/*19*/)		P1_bit.no2= data;	// RY12-> K1(TV)
-		else if(num== MAIN1/*20*/)	P2_bit.no0= data;	// RY0 -> K6(MAS1)
-		else if(num== MAIN2/*21*/)	P2_bit.no1= data;	// RY1 -> K7(MAS2)
-		
-		else if(num== K3/*ROOM1 15*/)	P14_bit.no6=data;	// P14_6-> K3
-		else if(num== K4/*ROOM2 16*/)	P1_bit.no0= data;	// P1_0-> K4
+		else if(num== K5/*ROOM3 17*/)	P2_bit.no5= data;
+		else if(num== K6/*ROOM4 18*/)	P1_bit.no1= data;	// 増設Ry
+#else
 		else if(num== K5/*ROOM3 17*/)	P1_bit.no1= data;	// RY11-> K5
-		else if(num== K6/*ROOM4 18*/)	P0_bit.no0= data;	// P0_0-> 増設Ry
+		else if(num== K6/*ROOM4 18*/)	P0_bit.no0= data;	// 増設Ry
+#endif
 		
-#endif		
-				
+		
+		else if(num== TV/*19*/)		P1_bit.no2= data;	// RY12-> K1(TV)
+		else if(num== MAIN1/*20*/)	P2_bit.no0= data;	// RY0 -> K6(MAS1)
+		else if(num== MAIN2/*21*/)	P2_bit.no1= data;	// RY1 -> K7(MAS2)
 }
 /*******************************************************************************
 * Function Name: WELLCOME設定はこちら
@@ -1182,54 +1203,33 @@ void	portOut(unsigned char num, unsigned char data){
 *******************************************************************************/
 void	cardOn(char num){		
 		
-		//sideDim= DL50ON;
-		sideDim= lastside= DL50ON;
-		lastDim= BRIGH;		//BATH_DL
+		sideDim= DL50ON;
 		
-		ryCont(BATH,'w',0);
-		ryCont(MIRR,'w',0);
-		ryCont(FOOT,'w',0);
-		
-		if(num== 'f'){
-			
-			ryCont(CARD,'w',0);
-			ryCont(TV,'w',0);
-			ryCont(MAIN1,'w',0);
-			ryCont(MAIN2,'w',0);
-		}
-
 		if(num== 'c'){
 			
 			ryCont(CARD,'w',1);			// relay[0]= 1;
 			ryCont(TV,'w',1);
 			ryCont(MAIN1,'w',1);
 			ryCont(MAIN2,'w',1);
-		}
+		}		
 		
 		ryCont(DESK,'w',1);				//K11
 		ryCont(BSIDE,'w',1);
 		
 		
-#ifdef	DL3SP		
-		ryCont(K5,'w',1);
-#endif
-
 #ifdef	DL3		
 		ryCont(K5,'w',1);
-		ryCont(K4,'w',1);
-#endif
 
-#ifdef	JS1
+#elif	JS1
 		ryCont(K3,'w',1);
 		ryCont(K4,'w',1);
-#endif
 
-#ifdef	JS3_T
+#elif	JS3_T
 		ryCont(K3,'w',1);
 		ryCont(K5,'w',1);
-#endif
+		ryCont(K6,'w',1);
 
-#ifdef	JS3_K
+#elif	JS3_K
 		ryCont(K3,'w',1);
 		ryCont(K4,'w',1);
 		ryCont(K5,'w',1);
@@ -1237,14 +1237,13 @@ void	cardOn(char num){
 
 }
 
-
 void	cardOff(void){
 		sideDim= ROFF;				//BSIDE_DL
 		bathDim= BOFF;				//BATH_DL
 									// ALL_OFF slowOutの為のこの方式
 		//ryCont(OFFCMD,'w',MAIN2);	// MAIN2はEND兼用			
 		ryCont(CARD,'w',0);			// relay[0]= 0;
-		//ryCont(DIST,'w',0);		DIST CARDから除外
+		ryCont(DIST,'w',0);
 		ryCont(DESK,'w',0);
 		ryCont(FOOT,'w',0);
 		ryCont(BSIDE,'w',0);
@@ -1257,7 +1256,9 @@ void	cardOff(void){
 		ryCont(K4,'w',0);
 		ryCont(K5,'w',0);
 		
+#ifndef	STANDARD
 		ryCont(K6,'w',0);			//増設
+#endif
 		ryCont(TV,'w',0);
 	
 		ryCont(MAIN1,'w',0);
@@ -1329,26 +1330,19 @@ void	info(void){
 
 #ifdef	DL3
 	sprintf(buf ,"DL3 DATE is %s \n" ,__DATE__);
-#endif	
-	
-#ifdef	DL3SP
-	sprintf(buf ,"DL3SP DATE is %s \n" ,__DATE__);
-#endif
 
-#ifdef JS1
+#elif JS1
 	sprintf(buf ,"JS1 DATE is %s \n" ,__DATE__);
-#endif
 
-#ifdef JS3_T
+#elif JS3_T
 	sprintf(buf ,"JS3-T DATE is %s \n" ,__DATE__);
-#endif
 
-#ifdef JS3_K
+#elif JS3_K
 	sprintf(buf ,"JS3-K DATE is %s \n" ,__DATE__);
-#endif
-
-#ifdef STANDARD
+	
+#elif STANDARD
 	sprintf(buf ,"STANDARD DATE is %s \n" ,__DATE__);
+
 #endif
 
     //sprintf(buf ,"DATE is %s \n" ,__DATE__);
@@ -1385,48 +1379,5 @@ void	DebugPrint(char *s){
 	serialPrint0(__buf__,strlen(__buf__));
 }
 #endif
-
-/***********************************************************************************************************************
-* Function Name: 
-* Description  : 
-* Arguments    : None
-* Return Value : None
-***********************************************************************************************************************/
-void	outMoni(void){
-	
-	char	*buf= outmoni;
-			buf+=	6;
-			*(buf)=	0x30|(ryCont(MAIN1,'r',0));
-			buf+=	8;
-			*(buf)=	0x30|(ryCont(MAIN2,'r',0));
-			buf+=	6;
-			*(buf)=	0x30|(ryCont(MIRR,'r',0));
-			buf+=	6;
-			*(buf)=	0x30|(ryCont(FOOT,'r',0));
-			buf+=	6;
-			*(buf)=	0x30|(ryCont(BATH,'r',0));
-			buf+=	6;
-			*(buf)=0x30|(ryCont(DESK,'r',0));
-			buf+=	6;
-			*(buf)=0x30|(ryCont(BED_R,'r',0));
-			buf+=	6;
-			*(buf)=0x30|(ryCont(BED_L,'r',0));
-			buf+=	6;
-			*(buf)=0x30|(ryCont(BSIDE,'r',0));
-			buf+=	6;
-			*(buf)=0x30|(ryCont(TV,'r',0));
-			buf+=	6;
-			*(buf)=0x30|(ryCont(CHIME,'r',0));
-			buf+=	6;
-			*(buf)=0x30|(ryCont(K3,'r',0));
-			buf+=	6;
-			*(buf)=0x30|(ryCont(K4,'r',0));
-			buf+=	6;
-			*(buf)=0x30|(ryCont(K5,'r',0));
-			buf+=	6;
-			*(buf)=0x30|(ryCont(K6,'r',0));
-			
-			serialPrint0(outmoni,strlen(outmoni));
-}
 
 /* End user code. Do not edit comment generated here */
